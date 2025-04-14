@@ -19,5 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "overcooked"
+rootProject.name = "cs205"
 include(":app")
+ 
