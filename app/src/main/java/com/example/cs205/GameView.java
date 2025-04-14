@@ -28,7 +28,7 @@ public class GameView extends View {
 
     // --- Constants ---
     private static final int GRID_WIDTH = 10; // Number of columns
-    private static final int GRID_HEIGHT = 20; // Number of rows
+    private static final int GRID_HEIGHT = 10; // Number of rows
     private static final int BLOCK_SPAWN_AREA_HEIGHT = 4; // Rows reserved for spawning new blocks below grid
     private static final long GAME_UPDATE_INTERVAL = 50; // Update game state every 50ms
     private static final long BLOCK_SPAWN_INTERVAL = 3000; // Spawn new block every 3s
