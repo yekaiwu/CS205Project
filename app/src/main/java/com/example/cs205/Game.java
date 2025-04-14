@@ -51,6 +51,9 @@ public class Game {
     private long lastSpawnTime = 0;
     private long lastUpdateTime = 0;
 
+    // Grid worker thread
+    private GridWorker gridWorker;
+
     public Game(final Runnable runnable, final Predicate<Consumer<Canvas>> useCanvas) {
         this.runnable = runnable;
         this.useCanvas = useCanvas;
@@ -83,6 +86,10 @@ public class Game {
         // Initialize with empty grid already done in field init
         lastSpawnTime = SystemClock.elapsedRealtime();
         spawnNewBlock(); // Spawn the first block
+        
+        // Create and start the grid worker
+        gridWorker = new GridWorker(this, GRID_WIDTH, GRID_HEIGHT);
+        gridWorker.startWorker();
     }
     
     public void resize(int width, int height) {
@@ -308,29 +315,9 @@ public class Game {
         lastUpdateTime = currentTime;
         
         synchronized (mutex) {
-            // Update timers for placed processes and check for completion
-            List<ProcessBlock> finishedProcesses = new ArrayList<>();
-            for (ProcessBlock process : activeProcesses) {
-                if (process.isPlaced) {
-                    process.updateTimer();
-                    if (process.isFinished) {
-                        finishedProcesses.add(process);
-                    }
-                }
-            }
-    
-            // Remove finished processes
-            if (!finishedProcesses.isEmpty()) {
-                for (ProcessBlock finished : finishedProcesses) {
-                    removeFromGrid(finished);
-                    activeProcesses.remove(finished);
-                }
-            }
-    
-            // Check for line clears
-            checkAndClearLines();
-    
-            // Spawn new blocks periodically
+            // Grid operations are now handled by GridWorker
+            
+            // Only handle spawning new blocks here
             if (currentTime - lastSpawnTime > BLOCK_SPAWN_INTERVAL) {
                 int waitingCount = 0;
                 for (ProcessBlock p : activeProcesses) {
@@ -594,5 +581,154 @@ public class Game {
             }
             return 1000 / targetFps;
         }
+    }
+
+    public void shutdown() {
+        if (gridWorker != null) {
+            gridWorker.stopWorker();
+        }
+    }
+    
+    public void pauseGame() {
+        if (gridWorker != null) {
+            gridWorker.pauseWorker();
+        }
+    }
+    
+    public void resumeGame() {
+        if (gridWorker != null) {
+            gridWorker.resumeWorker();
+        }
+    }
+    
+    /**
+     * Get a copy of the current grid state for safe access from the worker thread
+     */
+    public int[][] getGridState() {
+        synchronized (mutex) {
+            int[][] gridCopy = new int[GRID_HEIGHT][GRID_WIDTH];
+            for (int y = 0; y < GRID_HEIGHT; y++) {
+                System.arraycopy(grid[y], 0, gridCopy[y], 0, GRID_WIDTH);
+            }
+            return gridCopy;
+        }
+    }
+    
+    /**
+     * Update timers for placed blocks and return a list of blocks that are finished
+     * Called by GridWorker
+     */
+    public List<ProcessBlock> updatePlacedBlockTimers() {
+        List<ProcessBlock> finishedBlocks = new ArrayList<>();
+        
+        synchronized (mutex) {
+            for (ProcessBlock block : activeProcesses) {
+                if (block.isPlaced && !block.isFinished) {
+                    block.updateTimer();
+                    if (block.isFinished) {
+                        finishedBlocks.add(block);
+                        Log.d(LOG_TAG, "Block " + block.id + " finished");
+                    }
+                }
+            }
+        }
+        
+        return finishedBlocks;
+    }
+    
+    /**
+     * Remove blocks that have finished their execution time
+     * Called by GridWorker
+     */
+    public void removeFinishedBlocks(List<ProcessBlock> finishedBlocks) {
+        if (finishedBlocks.isEmpty()) return;
+        
+        synchronized (mutex) {
+            for (ProcessBlock block : finishedBlocks) {
+                removeFromGrid(block);
+                activeProcesses.remove(block);
+                Log.d(LOG_TAG, "Removed finished block ID: " + block.id);
+            }
+        }
+    }
+    
+    /**
+     * Clear individual cells from the grid, which may partially remove blocks
+     * Called by GridWorker
+     */
+    public void clearCells(List<Point> cellsToRemove) {
+        if (cellsToRemove.isEmpty()) return;
+        
+        synchronized (mutex) {
+            Log.d(LOG_TAG, "Clearing " + cellsToRemove.size() + " cells from filled lines");
+            
+            // Map of blockId -> list of remaining cells
+            java.util.Map<Integer, List<Point>> remainingBlockCells = new java.util.HashMap<>();
+            
+            // First, clear all cells marked for removal
+            for (Point cell : cellsToRemove) {
+                int x = cell.x;
+                int y = cell.y;
+                
+                if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+                    int blockId = grid[y][x] - 1; // -1 to get actual ID
+                    if (blockId >= 0) {
+                        // Clear this cell
+                        grid[y][x] = 0;
+                        
+                        // Track block IDs affected by line clear
+                        if (!remainingBlockCells.containsKey(blockId)) {
+                            remainingBlockCells.put(blockId, new ArrayList<>());
+                        }
+                    }
+                }
+            }
+            
+            // Find all remaining cells for each affected block
+            for (int y = 0; y < GRID_HEIGHT; y++) {
+                for (int x = 0; x < GRID_WIDTH; x++) {
+                    int blockId = grid[y][x] - 1; // -1 to get actual ID
+                    if (blockId >= 0 && remainingBlockCells.containsKey(blockId)) {
+                        remainingBlockCells.get(blockId).add(new Point(x, y));
+                    }
+                }
+            }
+            
+            // Process each affected block
+            for (java.util.Map.Entry<Integer, List<Point>> entry : remainingBlockCells.entrySet()) {
+                int blockId = entry.getKey();
+                List<Point> remainingCells = entry.getValue();
+                ProcessBlock block = findProcessById(blockId);
+                
+                if (block != null) {
+                    if (remainingCells.isEmpty()) {
+                        // Block completely cleared
+                        removeFromGrid(block);
+                        activeProcesses.remove(block);
+                        Log.d(LOG_TAG, "Block " + blockId + " completely cleared by line completion");
+                    } else {
+                        // Block partially cleared - update its shape
+                        updateBlockShapeForPartialClear(block, remainingCells);
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Update a block's shape when some of its cells are cleared
+     */
+    private void updateBlockShapeForPartialClear(ProcessBlock block, List<Point> remainingCells) {
+        // This is a complex operation that would create a new shape for the block
+        // based on remaining cells. For simplicity, we'll just remove the block for now
+        
+        // In a full implementation, we would:
+        // 1. Find the bounding box of remaining cells
+        // 2. Create a new shape array representing just those cells
+        // 3. Update the block's position and shape accordingly
+        
+        Log.d(LOG_TAG, "Block " + block.id + " partially cleared - removing for simplicity");
+        removeFromGrid(block);
+        activeProcesses.remove(block);
     }
 } 
