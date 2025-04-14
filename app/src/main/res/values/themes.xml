@@ -6,4 +6,10 @@
     </style>
 
     <style name="Theme.Cs205" parent="Base.Theme.Cs205" />
+    
+    <style name="Theme.Cs205.NoActionBar" parent="Theme.Cs205">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
 </resources>
