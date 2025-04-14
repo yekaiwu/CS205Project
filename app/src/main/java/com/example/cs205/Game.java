@@ -23,6 +23,7 @@ public class Game {
     private final static int BLOCK_SPAWN_AREA_HEIGHT = 4; // Rows reserved for spawning new blocks 
     private final static int targetFps = 30;
     private final static long BLOCK_SPAWN_INTERVAL = 3000; // Spawn new block every 3s
+    private final static int QUEUE_STATUS_HEIGHT = 60; // Height of queue status display - increased
 
     private final String LOG_TAG = Game.class.getSimpleName();
     private final Object mutex = new Object();
@@ -35,12 +36,14 @@ public class Game {
     private final Paint textPaint = new Paint();
     private final Paint progressPaint = new Paint();
     private final Paint starvingPaint = new Paint(); // For blocks waiting too long
+    private final Paint queueStatusPaint = new Paint(); // For displaying queue status
 
     // --- Game State ---
     private int[][] grid = new int[GRID_HEIGHT][GRID_WIDTH]; // Represents the CPU grid: 0 = empty, >0 = process ID + 1
     private List<ProcessBlock> activeProcesses = new ArrayList<>();
     private ProcessBlock currentDraggingBlock = null; // Block being dragged by the user
     private Point dragOffset = new Point(); // Offset from touch point to block's top-left
+    private BlockQueue blockQueue = new BlockQueue(); // Producer-consumer queue for blocks
     
     private int width = 0;
     private int height = 0;
@@ -80,12 +83,16 @@ public class Game {
         starvingPaint.setColor(Color.RED);
         starvingPaint.setStyle(Paint.Style.FILL_AND_STROKE);
         starvingPaint.setStrokeWidth(4);
+        
+        queueStatusPaint.setColor(Color.WHITE);
+        queueStatusPaint.setTextSize(28); // Increased text size
+        queueStatusPaint.setTextAlign(Paint.Align.LEFT);
     }
 
     private void initGame() {
         // Initialize with empty grid already done in field init
         lastSpawnTime = SystemClock.elapsedRealtime();
-        spawnNewBlock(); // Spawn the first block
+        produceNewBlock(); // Spawn the first block
         
         // Create and start the grid worker
         gridWorker = new GridWorker(this, GRID_WIDTH, GRID_HEIGHT);
@@ -130,6 +137,9 @@ public class Game {
         
         // Draw waiting blocks in the spawn area
         drawWaitingBlocks(canvas);
+        
+        // Draw the queue status
+        drawQueueStatus(canvas);
         
         // Draw the currently dragging block, if any
         if (currentDraggingBlock != null) {
@@ -185,42 +195,84 @@ public class Game {
     }
     
     private void drawWaitingBlocks(Canvas canvas) {
-        // Draw waiting blocks in a row below the grid
-        int waitingBlocksCount = 0;
+        // Get all blocks in the queue
+        ProcessBlock[] queuedBlocks = blockQueue.getQueuedBlocks();
         
-        synchronized (mutex) {
-            for (ProcessBlock block : activeProcesses) {
-                if (!block.isPlaced && block != currentDraggingBlock) {
-                    int blockWidth = block.getWidth() * cellSize;
-                    int blockHeight = block.getHeight() * cellSize;
-                    
-                    // Position blocks evenly in the waiting area
-                    int spacing = Math.max(10, (width - 5 * blockWidth) / 6);
-                    int pixelX = spacing + waitingBlocksCount * (blockWidth + spacing);
-                    int pixelY = gridOffsetY + GRID_HEIGHT * cellSize + 20;
-                    
-                    // Store the drawing position for touch detection
-                    block.tempDrawX = pixelX;
-                    block.tempDrawY = pixelY;
-                    block.tempDrawCellSize = cellSize;
-                    
-                    drawBlock(canvas, block, pixelX, pixelY, cellSize);
-                    
-                    // Indicate starving blocks with a red outline
-                    if (block.isStarving()) {
-                        canvas.drawRect(
-                            pixelX - 3, 
-                            pixelY - 3, 
-                            pixelX + blockWidth + 3, 
-                            pixelY + blockHeight + 3, 
-                            starvingPaint
-                        );
-                    }
-                    
-                    waitingBlocksCount++;
-                }
+        // Draw blocks in two rows, 3 in each row
+        int cellSizeForQueue = Math.min(cellSize, (width - 40) / 3);
+        int rowSpacing = 20;
+        int colSpacing = (width - 3 * cellSizeForQueue) / 4;
+        
+        for (int i = 0; i < queuedBlocks.length && i < 6; i++) {
+            ProcessBlock block = queuedBlocks[i];
+            int row = i / 3; // 0 for first row, 1 for second row
+            int col = i % 3; // 0, 1, or 2 for columns
+            
+            int pixelX = colSpacing + col * (cellSizeForQueue + colSpacing);
+            int pixelY = gridOffsetY + GRID_HEIGHT * cellSize + rowSpacing + 
+                       row * (cellSizeForQueue * 2 + rowSpacing);
+            
+            // Store the drawing position for touch detection
+            block.tempDrawX = pixelX;
+            block.tempDrawY = pixelY;
+            block.tempDrawCellSize = cellSizeForQueue;
+            
+            drawBlock(canvas, block, pixelX, pixelY, cellSizeForQueue);
+            
+            // Indicate starving blocks with a red outline
+            if (block.isStarving()) {
+                int blockWidth = block.getWidth() * cellSizeForQueue;
+                int blockHeight = block.getHeight() * cellSizeForQueue;
+                canvas.drawRect(
+                    pixelX - 3, 
+                    pixelY - 3, 
+                    pixelX + blockWidth + 3, 
+                    pixelY + blockHeight + 3, 
+                    starvingPaint
+                );
             }
         }
+    }
+    
+    /**
+     * Draw queue status information
+     */
+    private void drawQueueStatus(Canvas canvas) {
+        int queueSize = blockQueue.getSize();
+        int queueCapacity = 6;
+        int overflowCount = blockQueue.getOverflowCount();
+        
+        String queueStatus = "PROCESS QUEUE: " + queueSize + "/" + queueCapacity;
+        
+        // Display warning if queue is getting full
+        if (queueSize == queueCapacity) {
+            queueStatusPaint.setColor(Color.RED);
+            queueStatus += " (FULL)";
+        } else if (queueSize >= queueCapacity * 2/3) {
+            queueStatusPaint.setColor(Color.YELLOW);
+            queueStatus += " (WARNING)";
+        } else {
+            queueStatusPaint.setColor(Color.WHITE);
+        }
+        
+        // Draw main status text
+        int y = gridOffsetY + GRID_HEIGHT * cellSize + 
+                2 * (cellSize * 2 + 20) + 30;
+        canvas.drawText(queueStatus, 20, y, queueStatusPaint);
+        
+        // Draw overflow count on the next line
+        String overflowText = "OVERFLOW COUNT: " + overflowCount + 
+                              " (Blocks lost due to full queue)";
+        
+        // Use red for overflow text if there are any overflows
+        if (overflowCount > 0) {
+            queueStatusPaint.setColor(Color.RED);
+        } else {
+            queueStatusPaint.setColor(Color.WHITE);
+        }
+        
+        // Draw overflow text on the next line
+        canvas.drawText(overflowText, 20, y + 35, queueStatusPaint);
     }
     
     private void drawDraggingBlock(Canvas canvas) {
@@ -319,26 +371,29 @@ public class Game {
             
             // Only handle spawning new blocks here
             if (currentTime - lastSpawnTime > BLOCK_SPAWN_INTERVAL) {
-                int waitingCount = 0;
-                for (ProcessBlock p : activeProcesses) {
-                    if (!p.isPlaced) waitingCount++;
-                }
-                
-                if (waitingCount < 5) {
-                    spawnNewBlock();
-                    lastSpawnTime = currentTime;
-                }
+                // Always try to produce a new block on timer
+                produceNewBlock();
+                lastSpawnTime = currentTime;
             }
         }
     }
     
-    private void spawnNewBlock() {
+    private void produceNewBlock() {
         ProcessBlock newBlock = ProcessBlock.createRandomProcess();
         newBlock.position = new Point(-1, -1); // Mark as off-grid initially
-        synchronized (mutex) {
-            activeProcesses.add(newBlock);
+        
+        boolean added = blockQueue.produce(newBlock);
+        if (added) {
+            synchronized (mutex) {
+                activeProcesses.add(newBlock);
+            }
+            Log.d(LOG_TAG, "Produced new block: ID " + newBlock.id);
+        } else {
+            // Block wasn't added due to full queue
+            // Note: BlockQueue already increments the overflow counter internally
+            Log.d(LOG_TAG, "Failed to produce new block - queue full (overflow count: " + 
+                  blockQueue.getOverflowCount() + ")");
         }
-        Log.d(LOG_TAG, "Spawned new block: ID " + newBlock.id);
     }
     
     // Check if a block can be placed at the target grid position
@@ -477,23 +532,24 @@ public class Game {
     }
     
     public ProcessBlock findBlockAtTouch(float touchX, float touchY) {
-        // First check if touch is on a waiting block
-        synchronized (mutex) {
-            for (ProcessBlock block : activeProcesses) {
-                if (!block.isPlaced && block.tempDrawX >= 0) {
-                    int blockWidth = block.getWidth() * block.tempDrawCellSize;
-                    int blockHeight = block.getHeight() * block.tempDrawCellSize;
-                    
-                    if (touchX >= block.tempDrawX && 
-                        touchX < block.tempDrawX + blockWidth &&
-                        touchY >= block.tempDrawY && 
-                        touchY < block.tempDrawY + blockHeight) {
-                        return block;
-                    }
+        // First check if touch is on a waiting block in the queue
+        ProcessBlock[] queuedBlocks = blockQueue.getQueuedBlocks();
+        for (ProcessBlock block : queuedBlocks) {
+            if (block.tempDrawX >= 0) {
+                int blockWidth = block.getWidth() * block.tempDrawCellSize;
+                int blockHeight = block.getHeight() * block.tempDrawCellSize;
+                
+                if (touchX >= block.tempDrawX && 
+                    touchX < block.tempDrawX + blockWidth &&
+                    touchY >= block.tempDrawY && 
+                    touchY < block.tempDrawY + blockHeight) {
+                    return block;
                 }
             }
+        }
         
-            // Then check if touch is on a placed block
+        // Then check if touch is on a placed block
+        synchronized (mutex) {
             if (isOverGrid((int)touchX, (int)touchY)) {
                 int gridX = (int)((touchX - gridOffsetX) / cellSize);
                 int gridY = (int)((touchY - gridOffsetY) / cellSize);
@@ -511,16 +567,19 @@ public class Game {
     }
     
     public void startDragging(ProcessBlock block, float touchX, float touchY) {
-        synchronized (mutex) {
-            if (block != null) {
-                Log.d(LOG_TAG, "Starting to drag block ID: " + block.id);
-                currentDraggingBlock = block;
+        if (block != null) {
+            Log.d(LOG_TAG, "Starting to drag block ID: " + block.id);
+            currentDraggingBlock = block;
+            
+            // Calculate drag offset based on touch location within block
+            if (!block.isPlaced) {
+                dragOffset.x = (int)(touchX - block.tempDrawX);
+                dragOffset.y = (int)(touchY - block.tempDrawY);
                 
-                // Calculate drag offset based on touch location within block
-                if (!block.isPlaced) {
-                    dragOffset.x = (int)(touchX - block.tempDrawX);
-                    dragOffset.y = (int)(touchY - block.tempDrawY);
-                } else {
+                // Remove from queue when dragging starts (consumer action)
+                blockQueue.consumeNonBlocking();
+            } else {
+                synchronized (mutex) {
                     // Remove from grid if it was placed
                     removeFromGrid(block);
                     
@@ -730,5 +789,15 @@ public class Game {
         Log.d(LOG_TAG, "Block " + block.id + " partially cleared - removing for simplicity");
         removeFromGrid(block);
         activeProcesses.remove(block);
+    }
+
+    /**
+     * Reset the overflow counter for the block queue
+     */
+    public void resetOverflowCounter() {
+        if (blockQueue != null) {
+            blockQueue.resetOverflowCount();
+            Log.d(LOG_TAG, "Overflow counter reset");
+        }
     }
 } 

@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Worker thread for managing grid state updates
  * Handles processing block timers and clearing lines in the background
+ * Also acts as a consumer for the process blocks
  */
 public class GridWorker {
     private static final String LOG_TAG = "GridWorker";
@@ -126,6 +127,8 @@ public class GridWorker {
     
     /**
      * Check for completed lines in the grid and clear them
+     * This method also acts as a consumer in the producer-consumer pattern
+     * by clearing lines and freeing up space for new blocks
      */
     private void checkAndClearLines() {
         // Get a copy of the grid for thread-safe access
@@ -171,6 +174,7 @@ public class GridWorker {
         // If we found any lines, clear them
         if (!cellsToRemove.isEmpty()) {
             gameInstance.clearCells(cellsToRemove);
+            Log.d(LOG_TAG, "Consumed blocks by clearing " + cellsToRemove.size() + " cells");
         }
     }
 } 

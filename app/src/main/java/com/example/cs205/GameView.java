@@ -34,9 +34,23 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private final Game game = new Game(this::sendNotification, this::useCanvas);
     private GameThread gameThread;
 
-    @SuppressLint("ClickableViewAccessibility")
     public GameView(final Context context) {
         super(context);
+        initView();
+    }
+    
+    public GameView(final Context context, final AttributeSet attrs) {
+        super(context, attrs);
+        initView();
+    }
+    
+    public GameView(final Context context, final AttributeSet attrs, final int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        initView();
+    }
+    
+    @SuppressLint("ClickableViewAccessibility")
+    private void initView() {
         setKeepScreenOn(true);
         getHolder().addCallback(this);
         setFocusable(View.FOCUSABLE);
@@ -178,5 +192,22 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             // Always recycle the obtained event when done to avoid memory leaks
             touchEvent.recycle();
         }
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        
+        // Allow for queue display area by reducing available height
+        int availableHeight = h - 120; // Reserve more space for enhanced queue status display
+        game.resize(w, availableHeight);
+    }
+
+    /**
+     * Get the Game instance
+     * @return The Game instance
+     */
+    public Game getGame() {
+        return game;
     }
 }

@@ -1,41 +1,57 @@
 package com.example.cs205;
 
-import android.app.Activity;
 import android.os.Bundle;
-import android.view.Window;
-import android.view.WindowManager;
+import android.view.View;
+import android.widget.Button;
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * A class representing the game activity.
  */
-public class GameActivity extends Activity {
+public class GameActivity extends AppCompatActivity {
 
     private GameView gameView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Hide the status bar
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN
-        );
-
-        // Create a new game view
-        gameView = new GameView(this);
-        setContentView(gameView);
+        
+        // Hide the action bar for a more immersive experience
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+        
+        setContentView(R.layout.activity_game);
+        
+        gameView = findViewById(R.id.gameView);
+        
+        // Find and configure reset overflow button
+        Button resetButton = findViewById(R.id.reset_overflow_button);
+        if (resetButton != null) {
+            resetButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (gameView != null && gameView.getGame() != null) {
+                        gameView.getGame().resetOverflowCounter();
+                    }
+                }
+            });
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        gameView.pause();
+        if (gameView != null) {
+            gameView.pause();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        gameView.resume();
+        if (gameView != null) {
+            gameView.resume();
+        }
     }
 } 
