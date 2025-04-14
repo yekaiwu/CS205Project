@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#444444"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+<TextView
+android:id="@+id/dialogTitle"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:text="How To Play"
+android:textSize="24sp"
+android:textStyle="bold"
+android:fontFamily="@font/play"
+android:textColor="@android:color/white"
+android:layout_gravity="center_horizontal"
+android:paddingBottom="12dp"/>
+
+<TextView
+android:id="@+id/dialogMessage"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:lineSpacingExtra="6dp"
+android:fontFamily="@font/play"
+android:textColor="@android:color/white"
+android:textSize="16sp"
+android:text="1. Drag and drop process blocks onto the CPU grid\n\n 2. Each block takes time to process - watch the progress!\n\n 3. Fill entire rows to complete them fast!\n\n 4. Don’t let your waiting processes starve \n\n 5. Keep managing processes efficiently as long as possible!" />
+
+<Button
+android:id="@+id/okButton"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:text="Got it!"
+android:textColor="@android:color/white"
+android:backgroundTint="#87CEEB"
+android:fontFamily="@font/play"
+android:layout_gravity="center"
+android:layout_marginTop="20dp"
+android:paddingLeft="24dp"
+android:paddingRight="24dp"/>
+    </LinearLayout>
