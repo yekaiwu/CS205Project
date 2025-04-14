@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/homeLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#263D71"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tvGameTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CS205 Game"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="40dp" />
+
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="Start"
+        android:textSize="20sp"
+        android:layout_marginBottom="20dp"
+        android:backgroundTint="#FFA726"
+        android:textColor="#FFFFFF" />
+
+    <Button
+        android:id="@+id/btnHowToPlay"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="How to Play"
+        android:textSize="20sp"
+        android:backgroundTint="#29B6F6"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>

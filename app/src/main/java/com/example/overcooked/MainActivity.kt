@@ -1,47 +1,27 @@
 package com.example.overcooked
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.overcooked.ui.theme.OvercookedTheme
+import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
+import android.widget.Toast
+import android.content.Intent
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            OvercookedTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+        setContentView(R.layout.activity_main)
+
+        val btnStart = findViewById<Button>(R.id.btnStart)
+        val btnHowToPlay = findViewById<Button>(R.id.btnHowToPlay)
+
+        btnStart.setOnClickListener {
+            val intent = Intent(this, GameActivity::class.java)
+            startActivity(intent)
         }
-    }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    OvercookedTheme {
-        Greeting("Android")
+        btnHowToPlay.setOnClickListener {
+            // TODO: Replace this with intent to HowToPlayActivity
+            Toast.makeText(this, "How to Play clicked!", Toast.LENGTH_SHORT).show()
+        }
     }
 }
