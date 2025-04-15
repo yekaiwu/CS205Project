@@ -50,9 +50,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     }
     
     @SuppressLint("ClickableViewAccessibility")
-    private void initView() {
+    private void initView() { // Initialize the view
         setKeepScreenOn(true);
-        getHolder().addCallback(this);
+        getHolder().addCallback(this); // Register the SurfaceHolder callback
         setFocusable(View.FOCUSABLE);
         setOnTouchListener((view, event) -> {
             handleTouchEvent(event);
@@ -209,5 +209,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      */
     public Game getGame() {
         return game;
+    }
+
+    public int endGame() {
+        // End the game and return the score
+        if (gameThread != null) {
+            gameThread.stopLoop();
+            gameThread = null;
+        }
+        return game.endGame();
     }
 }

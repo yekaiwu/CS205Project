@@ -118,7 +118,8 @@ public class GridWorker {
             }
             
             // 3. Check for completed lines and clear them
-            checkAndClearLines();
+            gameInstance.checkAndClearLines(); // change to gameInstance method to increment the counter
+
             
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error performing grid operations", e);

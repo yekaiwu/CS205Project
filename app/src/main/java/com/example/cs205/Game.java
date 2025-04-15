@@ -18,8 +18,8 @@ import java.util.function.Predicate;
  */
 public class Game {
     // --- Constants ---
-    private final static int GRID_WIDTH = 10; // Number of columns
-    private final static int GRID_HEIGHT = 10; // Number of rows
+    private final static int GRID_WIDTH = 6; // Number of columns
+    private final static int GRID_HEIGHT = 6; // Number of rows
     private final static int BLOCK_SPAWN_AREA_HEIGHT = 4; // Rows reserved for spawning new blocks 
     private final static int targetFps = 30;
     private final static long BLOCK_SPAWN_INTERVAL = 3000; // Spawn new block every 3s
@@ -57,6 +57,9 @@ public class Game {
     // Grid worker thread
     private GridWorker gridWorker;
 
+    private List<Integer> clearedProcesses; // process ids cleared from the grid
+    private List<Integer> starvedProcesses; // process ids that were starved
+
     public Game(final Runnable runnable, final Predicate<Consumer<Canvas>> useCanvas) {
         this.runnable = runnable;
         this.useCanvas = useCanvas;
@@ -91,6 +94,8 @@ public class Game {
 
     private void initGame() {
         // Initialize with empty grid already done in field init
+        clearedProcesses = new ArrayList<>();
+        starvedProcesses = new ArrayList<>();
         lastSpawnTime = SystemClock.elapsedRealtime();
         produceNewBlock(); // Spawn the first block
         
@@ -230,6 +235,10 @@ public class Game {
                     pixelY + blockHeight + 3, 
                     starvingPaint
                 );
+                // add this process to the list of starved processes
+                if (!starvedProcesses.contains(block.id)) {
+                    starvedProcesses.add(block.id);
+                }
             }
         }
     }
@@ -273,6 +282,14 @@ public class Game {
         
         // Draw overflow text on the next line
         canvas.drawText(overflowText, 20, y + 35, queueStatusPaint);
+
+        // Add cleared processes count below
+        int clearedCount = clearedProcesses != null ? clearedProcesses.size() : 0;
+        String clearedText = "CLEARED PROCESSES: " + clearedCount;
+        queueStatusPaint.setColor(Color.GREEN);
+
+        // Draw cleared processes text on the next line
+        canvas.drawText(clearedText, 20, y + 70, queueStatusPaint);
     }
     
     private void drawDraggingBlock(Canvas canvas) {
@@ -379,6 +396,12 @@ public class Game {
     }
     
     private void produceNewBlock() {
+        boolean isFull = blockQueue.isFull();
+        if (isFull) {
+            // Queue is full, cannot produce new block
+            Log.d(LOG_TAG, "Queue is full, cannot produce new block");
+            return;
+        }
         ProcessBlock newBlock = ProcessBlock.createRandomProcess();
         newBlock.position = new Point(-1, -1); // Mark as off-grid initially
         
@@ -466,7 +489,7 @@ public class Game {
         block.isPlaced = false;
     }
 
-    private void checkAndClearLines() {
+    public void checkAndClearLines() {
         boolean needShift = false;
         
         // Check for filled rows
@@ -490,6 +513,9 @@ public class Game {
                             removeFromGrid(block);
                         }
                         grid[y][x] = 0;
+                        if (!clearedProcesses.contains(blockId)) {
+                            clearedProcesses.add(blockId);
+                        }
                     }
                     needShift = true;
                 }
@@ -515,6 +541,9 @@ public class Game {
                             removeFromGrid(block);
                         }
                         grid[y][x] = 0;
+                        if (!clearedProcesses.contains(blockId)) {
+                            clearedProcesses.add(blockId);
+                        }
                     }
                     needShift = true;
                 }
@@ -707,6 +736,9 @@ public class Game {
                 removeFromGrid(block);
                 activeProcesses.remove(block);
                 Log.d(LOG_TAG, "Removed finished block ID: " + block.id);
+                if (!clearedProcesses.contains(block.id)) {
+                    clearedProcesses.add(block.id);
+                }
             }
         }
     }
@@ -799,5 +831,11 @@ public class Game {
             blockQueue.resetOverflowCount();
             Log.d(LOG_TAG, "Overflow counter reset");
         }
+    }
+
+    // shutdown the game and return the score
+    public int endGame() {
+        shutdown();
+        return clearedProcesses.size() - starvedProcesses.size();
     }
 } 

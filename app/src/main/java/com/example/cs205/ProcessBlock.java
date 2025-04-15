@@ -18,7 +18,7 @@ class ProcessBlock {
     boolean isPlaced = false; // Is the block currently on the CPU grid?
     boolean isFinished = false; // Has the process completed execution?
     long creationTimeMillis; // When the block was created (for starvation)
-    long maxWaitTimeMillis = 30000; // Max time to wait before becoming "impatient" (30s)
+    long maxWaitTimeMillis = 10000; // Max time to wait before becoming "impatient" (10s)
 
     private static int nextId = 0;
     private static final Random random = new Random();
@@ -101,29 +101,34 @@ class ProcessBlock {
         int type = random.nextInt(5); // Example: 5 types of blocks
         int color;
         int[][] shape;
-        long timeLimit = (random.nextInt(10) + 5) * 1000; // 5-14 seconds runtime
-
+//        long timeLimit = (random.nextInt(10) + 5) * 1000; // 5-14 seconds runtime
+        long timeLimit; // each type should have its own time limit
         switch (type) {
             case 0: // I shape
                 shape = new int[][]{{1, 1, 1, 1}};
                 color = Color.CYAN;
+                timeLimit = 15000; // 15 seconds
                 break;
             case 1: // O shape
                 shape = new int[][]{{1, 1}, {1, 1}};
                 color = Color.YELLOW;
+                timeLimit = 12000; // 12 seconds
                 break;
             case 2: // T shape
                 shape = new int[][]{{1, 1, 1}, {0, 1, 0}};
                 color = Color.MAGENTA;
+                timeLimit = 8000; // 8 seconds
                 break;
             case 3: // L shape
                 shape = new int[][]{{1, 0}, {1, 0}, {1, 1}};
                 color = Color.rgb(255, 165, 0); // Orange
+                timeLimit = 10000; // 10 seconds
                 break;
             case 4: // S shape
             default:
                 shape = new int[][]{{0, 1, 1}, {1, 1, 0}};
                 color = Color.GREEN;
+                timeLimit = 5000; // 5 seconds
                 break;
         }
         return new ProcessBlock(shape, color, timeLimit);
