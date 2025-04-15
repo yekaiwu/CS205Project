@@ -2,6 +2,7 @@ package com.example.cs205;
 
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -22,6 +23,9 @@ public class GameActivity extends AppCompatActivity {
         }
         
         setContentView(R.layout.activity_game);
+
+        // Keep the screen always on during gameplay.
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         
         gameView = findViewById(R.id.gameView);
         
