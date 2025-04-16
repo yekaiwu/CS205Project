@@ -92,6 +92,12 @@ public class GameActivity extends AppCompatActivity implements Timer.TimerListen
         timerTextView.setText("Time's up!");
 
         int currentScore = gameView.endGame();
+        
+        // Get the statistics from the game
+        Game game = gameView.getGame();
+        int processesCleared = game.getProcessesCleared();
+        int processesStarved = game.getProcessesStarved();
+        
         saveHighestCounter(currentScore);
 
         SQLiteDatabase db = dbHelper.getReadableDatabase();
@@ -105,7 +111,13 @@ public class GameActivity extends AppCompatActivity implements Timer.TimerListen
         Button okButton = dialogView.findViewById(R.id.okButton);
 
         titleText.setText("Game Over!");
-        messageText.setText("Your score: " + currentScore + "\nHighest score: " + highestScore);
+        messageText.setText(
+            "Your score: " + currentScore + 
+            "\nHighest score: " + highestScore +
+            "\n\nStatistics:" +
+            "\nProcesses cleared: " + processesCleared + 
+            "\nProcesses starved: " + processesStarved
+        );
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(dialogView)

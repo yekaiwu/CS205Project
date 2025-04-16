@@ -838,4 +838,18 @@ public class Game {
         shutdown();
         return clearedProcesses.size() - starvedProcesses.size();
     }
+
+    /**
+     * Get the number of processes cleared from the grid
+     */
+    public int getProcessesCleared() {
+        return clearedProcesses.size();
+    }
+
+    /**
+     * Get the number of processes that starved
+     */
+    public int getProcessesStarved() {
+        return starvedProcesses.size();
+    }
 } 
