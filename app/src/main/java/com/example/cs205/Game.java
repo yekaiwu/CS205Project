@@ -591,38 +591,6 @@ public class Game {
         if (block != null) {
             Log.d(LOG_TAG, "Starting to drag block ID: " + block.id);
             currentDraggingBlock = block;
-
-            if (block.isStarving()) {
-                Log.d(LOG_TAG, "Clearing starving block ID: " + block.id);
-                
-                // Remove from queue when it's a queued block
-                if (!block.isPlaced) {
-                    blockQueue.consumeNonBlocking();
-                } else {
-                    // Remove from grid if it was placed
-                    synchronized (mutex) {
-                        removeFromGrid(block);
-                    }
-                }
-                
-                // Remove from active processes
-                synchronized (mutex) {
-                    activeProcesses.remove(block);
-                }
-                
-                // Make sure it's in the starved processes list
-                if (!starvedProcesses.contains(block.id)) {
-                    starvedProcesses.add(block.id);
-                }
-                
-                // Clear the currentDraggingBlock IMMEDIATELY to prevent any drawing
-                currentDraggingBlock = null;
-                
-                // Force redraw to show the change immediately
-                runnable.run(); 
-                
-                return; // Exit early, don't continue with dragging
-            }
             
             // Calculate drag offset based on touch location within block
             if (!block.isPlaced) {
