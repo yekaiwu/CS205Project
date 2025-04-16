@@ -2,61 +2,76 @@ package com.example.cs205;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
-
-import android.database.sqlite.SQLiteDatabase;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.database.sqlite.SQLiteDatabase;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.Manifest;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
 /**
- * A class representing the main activity which contains a button to start the game.
+ * MainActivity shows the main menu screen and displays the high score.
+ * Handles animation, SQLite logic, and navigation to the game and help dialog.
  */
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
+
+    private ImageView trophyImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.main_menu);
 
-        // display highest score saved in local db
-        HighScoreDatabaseHelper dbHelper = new HighScoreDatabaseHelper(this);
-        TextView highScoreTextView = findViewById(R.id.highScoreTextView);
+        // Animate the trophy
+        trophyImage = findViewById(R.id.trophyImage);
+        Animation glow = AnimationUtils.loadAnimation(this, R.anim.glow);
+        trophyImage.startAnimation(glow);
 
-        // clear db for testing, comment out when not needed
-        // run the app once w this code, then stop the app and comment out this code then run again
-//         SQLiteDatabase dbTest = dbHelper.getWritableDatabase();
-//         dbHelper.clearScores(dbTest);
-
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        int highScore = dbHelper.getHighestScore(db);
-        highScoreTextView.setText("High Score: " + highScore);
-
-        // Find the start game button
-        final Button startButton = findViewById(R.id.start_button);
-
+        // Handle notification permission (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
             }
         }
-        
-        // Set a listener to start the game on click
-        startButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startGame();
-            }
+
+        // Show high score from local SQLite database
+        HighScoreDatabaseHelper dbHelper = new HighScoreDatabaseHelper(this);
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        int highScore = dbHelper.getHighestScore(db);
+        TextView highScoreTextView = findViewById(R.id.highScoreTextView);
+        highScoreTextView.setText("High Score: " + highScore);
+
+        // Start Game button
+        Button startButton = findViewById(R.id.startButton);
+        startButton.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, GameActivity.class);
+            startActivity(intent);
         });
+
+        // How To Play button
+        Button howToPlayButton = findViewById(R.id.howToPlayButton);
+        howToPlayButton.setOnClickListener(v -> showHowToPlayDialog());
     }
 
-    /**
-     * Start the game activity.
-     */
-    private void startGame() {
-        final Intent intent = new Intent(this, GameActivity.class);
-        startActivity(intent);
+    private void showHowToPlayDialog() {
+        // Inflate the custom layout
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_how_to_play, null);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+
+        // OK button listener to dismiss
+        Button okButton = dialogView.findViewById(R.id.okButton);
+        okButton.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 }

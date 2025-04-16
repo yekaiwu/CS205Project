@@ -8,6 +8,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import android.database.sqlite.SQLiteDatabase;
 /**
@@ -83,18 +84,47 @@ public class GameActivity extends AppCompatActivity implements Timer.TimerListen
         timerTextView.setText("Time left: " + timeFormatted);
     }
 
+// In GameActivity.java
+
     @Override
     public void onFinish() {
         Log.d("GameActivity", "Timer finished");
         timerTextView.setText("Time's up!");
-        int score = gameView.endGame();
-        saveHighestCounter(score);
-        // push notification
+
+        int currentScore = gameView.endGame();
+        saveHighestCounter(currentScore);
+
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        int highestScore = dbHelper.getHighestScore(db);
+
+        // Inflate custom layout
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_how_to_play, null);
+
+        TextView titleText = dialogView.findViewById(R.id.dialogTitle);
+        TextView messageText = dialogView.findViewById(R.id.dialogMessage);
+        Button okButton = dialogView.findViewById(R.id.okButton);
+
+        titleText.setText("Game Over!");
+        messageText.setText("Your score: " + currentScore + "\nHighest score: " + highestScore);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setCancelable(false)
+                .create();
+
+        okButton.setOnClickListener(v -> {
+            dialog.dismiss();
+            Intent intent = new Intent(GameActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+        });
+
+        dialog.show();
+
         NotificationPublisher.showNotification(this);
-        // should display score stats page, now it just go back to main activity page
-        Intent intent = new Intent(this, MainActivity.class);
-        startActivity(intent);
     }
+
 
     private void saveHighestCounter(int score) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
