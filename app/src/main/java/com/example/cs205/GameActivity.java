@@ -42,17 +42,17 @@ public class GameActivity extends AppCompatActivity implements Timer.TimerListen
         dbHelper = new HighScoreDatabaseHelper(this);
         
         // Find and configure reset overflow button
-        Button resetButton = findViewById(R.id.reset_overflow_button);
-        if (resetButton != null) {
-            resetButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (gameView != null && gameView.getGame() != null) {
-                        gameView.getGame().resetOverflowCounter();
-                    }
-                }
-            });
-        }
+//        Button resetButton = findViewById(R.id.reset_overflow_button);
+//        if (resetButton != null) {
+//            resetButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    if (gameView != null && gameView.getGame() != null) {
+//                        gameView.getGame().resetOverflowCounter();
+//                    }
+//                }
+//            });
+//        }
 
         if (!timer.isRunning()) {
             Log.d("GameActivity", "Timer started");
