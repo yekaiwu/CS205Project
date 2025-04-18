@@ -27,6 +27,8 @@ class ProcessBlock {
     transient int tempDrawY = -1;
     transient int tempDrawCellSize = -1;
 
+    public boolean isBeingDragged = false;
+
     // --- Constructor ---
     public ProcessBlock(int[][] shape, int color, long timeLimitMillis) {
         this.id = nextId++;

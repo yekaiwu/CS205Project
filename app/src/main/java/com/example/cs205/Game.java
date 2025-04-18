@@ -207,6 +207,7 @@ public class Game {
         int cellSizeForQueue = Math.min(cellSize, (width - 40) / 3);
         int rowSpacing = 20;
         int colSpacing = (width - 3 * cellSizeForQueue) / 4;
+        int queueCellSize = (int)(cellSize * 0.6f); // Smaller block for queue
         
         for (int i = 0; i < queuedBlocks.length && i < 6; i++) {
             ProcessBlock block = queuedBlocks[i];
@@ -221,8 +222,12 @@ public class Game {
             block.tempDrawX = pixelX;
             block.tempDrawY = pixelY;
             block.tempDrawCellSize = cellSizeForQueue;
-            
-            drawBlock(canvas, block, pixelX, pixelY, cellSizeForQueue);
+
+            if (block.isBeingDragged) {
+                drawBlock(canvas, block, pixelX, pixelY, cellSize); // full size
+            } else {
+                drawBlock(canvas, block, pixelX, pixelY, queueCellSize); // small
+            }
             
             // Indicate starving blocks with a red outline
             if (block.isStarving()) {
@@ -588,6 +593,7 @@ public class Game {
     }
     
     public void startDragging(ProcessBlock block, float touchX, float touchY) {
+        block.isBeingDragged = true;
         if (block != null) {
             Log.d(LOG_TAG, "Starting to drag block ID: " + block.id);
             currentDraggingBlock = block;
@@ -630,7 +636,7 @@ public class Game {
             }
         }
     }
-    
+
     public void stopDragging(float touchX, float touchY) {
         synchronized (mutex) {
             if (currentDraggingBlock != null) {
@@ -638,11 +644,12 @@ public class Game {
                 if (isOverGrid((int)touchX, (int)touchY)) {
                     int gridX = (int)((touchX - dragOffset.x - gridOffsetX) / cellSize);
                     int gridY = (int)((touchY - dragOffset.y - gridOffsetY) / cellSize);
-                    
+
                     // Try to place the block
                     placeBlockOnGrid(currentDraggingBlock, gridX, gridY);
                 }
-                
+
+                currentDraggingBlock.isBeingDragged = false;  // ✅ Put this BEFORE nulling
                 currentDraggingBlock = null;
             }
         }
