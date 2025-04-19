@@ -38,7 +38,7 @@ public class GameActivity extends AppCompatActivity implements Timer.TimerListen
         gameView = findViewById(R.id.gameView); // get game view
 
         timerTextView = findViewById(R.id.timerTextView); // get timer text view
-        timer = new Timer(20000, 1000, this); // 1 minute timer with 1 second interval
+        timer = new Timer(120000, 1000, this); // 1 minute timer with 1 second interval
         dbHelper = new HighScoreDatabaseHelper(this);
         
         // Find and configure reset overflow button

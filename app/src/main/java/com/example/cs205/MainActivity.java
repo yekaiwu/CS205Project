@@ -43,6 +43,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Show high score from local SQLite database
         HighScoreDatabaseHelper dbHelper = new HighScoreDatabaseHelper(this);
+
+        // clear db for testing, comment out when not needed
+        // run the app once w this code, then stop the app and comment out this code then run again
+//        SQLiteDatabase dbTest = dbHelper.getWritableDatabase();
+//        dbHelper.clearScores(dbTest);
+
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         int highScore = dbHelper.getHighestScore(db);
         TextView highScoreTextView = findViewById(R.id.highScoreTextView);
